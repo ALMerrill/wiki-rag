@@ -1,4 +1,4 @@
-PyMuPDF==1.24.5
+#PyMuPDF==1.24.5
 #PyPDF2==3.0.1
 pdfplumber==0.11.1
 nltk==3.8.1
@@ -8,3 +8,5 @@ sentence-transformers==3.0.1
 numpy==1.26.4
 datasets==2.20.0
 python-dotenv==1.0.1
+gensim==4.3.2
+scipy==1.12.0

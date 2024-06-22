@@ -96,3 +96,20 @@ class PDFDataset(Dataset):
             max_length=128,
         )
         return sentence, embedding
+
+
+class PDFTextDataset(Dataset):
+    """Torch Dataset for PDF Sentences."""
+
+    def __init__(self, pdf_paths: List[Path]):
+        sentences = []
+        for path in pdf_paths:
+            sentences.extend(pdf_to_sentence_chunks(path))
+        self.sentences = sentences
+
+    def __len__(self) -> int:
+        return len(self.sentences)
+
+    def __getitem__(self, idx: int) -> Tuple[str, torch.Tensor]:
+        sentence = self.sentences[idx]
+        return sentence

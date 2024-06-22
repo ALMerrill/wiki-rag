@@ -26,4 +26,5 @@ class GeminiAPI:
         print("QUERY:", query_text)
         data = {"contents": [{"parts": [{"text": query_text}]}]}
         response = requests.post(url, headers=headers, data=json.dumps(data))
+        print("RESPONSE:", response.json())
         return response.json()["candidates"][0]["content"]["parts"][0]["text"]
