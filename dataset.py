@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import Dataset
 from transformers import RagTokenizer
 import re
+from bs4 import BeautifulSoup
+import requests
 
 
 def filter_sentence(sentence):
@@ -14,7 +16,6 @@ def filter_sentence(sentence):
         r"https?://\S+",  # URLs
         r"ISBN\s*\d+",  # ISBNs
         r"OCLC\s*\d+",  # OCLC numbers
-        r"Retrieved \d{1,2} [A-Z][a-z]+ \d{4}",  # Retrieval dates (e.g., Retrieved 10 November 2023)
     ]
 
     for pattern in patterns:
@@ -58,21 +59,10 @@ def pdf_to_sentence_chunks(pdf_path: Path) -> List[str]:
     for i in range(len(text_chunks) - window_size):
         moving_window_chunks.append(" ".join(text_chunks[i : i + window_size]))
 
-    # for chunk in moving_window_chunks:
-    #    print(chunk)
-    # print()
-    print("text_chunks:")
-    for text_chunk in text_chunks:
-        print(text_chunk)
-    print()
     return moving_window_chunks
 
-    # print("removed:")
-    # for remove in removed:
-    #    print(remove)
-    return text_chunks
 
-
+# Initial setup, using above functions
 class PDFDataset(Dataset):
     """Torch Dataset for PDF Sentences."""
 
@@ -98,6 +88,7 @@ class PDFDataset(Dataset):
         return sentence, embedding
 
 
+# Used for Doc2Vec
 class PDFTextDataset(Dataset):
     """Torch Dataset for PDF Sentences."""
 
@@ -110,6 +101,47 @@ class PDFTextDataset(Dataset):
     def __len__(self) -> int:
         return len(self.sentences)
 
-    def __getitem__(self, idx: int) -> Tuple[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> str:
+        sentence = self.sentences[idx]
+        return sentence
+
+
+# Improved Wiki setup
+class WikiDataset(Dataset):
+    def __init__(self, wiki_page_names: List[str]):
+        text = []
+        for page_title in wiki_page_names:
+            url = f"https://en.wikipedia.org/wiki/{page_title}"
+            response = requests.get(url)
+            soup = BeautifulSoup(response.content, "html.parser")
+
+            content_div = soup.find("div", id="mw-content-text")
+            extracted_text = ""
+
+            for element in content_div.descendants:
+                if isinstance(element, str):
+                    if "References" in element and "[edit]" in element:
+                        break
+                    if ".mw-parser-output" in element:
+                        continue
+                    extracted_text += element.strip() + " "
+                elif element.name == "li":
+                    extracted_text += "\n- " + element.get_text(
+                        separator=" ", strip=True
+                    )
+
+            text.extend(extracted_text.strip().split(". "))
+
+        moving_window_chunks = []
+        window_size = 3
+        for i in range(len(text) - window_size):
+            moving_window_chunks.append(" ".join(text[i : i + window_size]))
+
+        self.sentences = moving_window_chunks
+
+    def __len__(self) -> int:
+        return len(self.sentences)
+
+    def __getitem__(self, idx: int) -> str:
         sentence = self.sentences[idx]
         return sentence
